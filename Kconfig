@@ -1,0 +1,11 @@
+source "Kconfig.zephyr"
+
+menu "My menu example"
+
+config MY_CONFIG_EXAMPLE_INT
+	int "Example entry int"
+	default 1024
+	help
+	  Some example entry int
+
+endmenu
