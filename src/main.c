@@ -60,7 +60,7 @@ static struct fs_mount_t mp = {
 static const char *disk_mount_pt = "/SD:";
 
 
-static int lsdir(const char *path, int depth)
+static int lsdir(const char *path, int depth, int current)
 {
 	int res;
 	struct fs_dir_t dirp;
@@ -81,7 +81,6 @@ static int lsdir(const char *path, int depth)
 	int_dir[strlen(path)] = '/';
 	int_dir_p = &int_dir[0] + strlen(path) + 1;
 
-	printk("\nListing dir %s\n", path);
 	for (;;) {
 		/* Verify fs_readdir() */
 		res = fs_readdir(&dirp, &entry);
@@ -91,13 +90,19 @@ static int lsdir(const char *path, int depth)
 			break;
 		}
 
+		/* tree hierarchy */
+		printk("+");
+		for (int i = 0; i < current; i++)
+		{
+			printk("-");
+		}
 		if (entry.type == FS_DIR_ENTRY_DIR) {
 			printk("[DIR ] %s\n", entry.name);
 			memcpy(int_dir_p, entry.name, strlen(entry.name));
 			int_dir[strlen(path)+strlen(entry.name)+1] = 0;
 			if (depth > 0)
 			{
-				lsdir(int_dir, --depth);
+				lsdir(int_dir, depth-1, current+1);
 			}
 		} else {
 			printk("[FILE] %s (size = %zu)\n",
@@ -149,7 +154,8 @@ void test_sd(void)
 
 	if (res == FR_OK) {
 		printk("Disk mounted.\n");
-		lsdir(disk_mount_pt, 3);
+		printk("\nListing dir %s\n", disk_mount_pt);
+		lsdir(disk_mount_pt, 3, 0);
 		if (fs_unmount(&mp))
 		{
 			LOG_ERR("Error unmounting %s\n", mp.mnt_point);
