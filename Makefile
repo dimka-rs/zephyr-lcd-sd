@@ -4,7 +4,7 @@ OPENOCD ?= $(HOME)/repos/openocd
 .PHONY: all clean flash menuconfig guiconfig init mcuboot flash_mcuboot flashst reset rtt
 
 all:
-	west build -b $(BOARD) #-- -DBOARD_ROOT=$(CURDIR)
+	west build -b $(BOARD) ## -- -DSHIELD="x_nucleo_idb05a1 x_nucleo_iks01a1"
 
 clean:
 	rm -rf ./build

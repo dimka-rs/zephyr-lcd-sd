@@ -1,12 +1,12 @@
 #include <zephyr/types.h>
 #include <zephyr.h>
 #include <device.h>
-#include <drivers/gpio.h>
 #include <stdio.h>
 #include <logging/log.h>
 #include <disk/disk_access.h>
 #include <fs/fs.h>
 #include <ff.h>
+#include "lcd.h"
 
 
 #define LOG_MODULE_NAME lcd_sd
@@ -15,34 +15,9 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define STACKSIZE 	2048
 #define PRIORITY	7
 #define LED_PIN 	17
-#define RUN_LED_BLINK_IVAL_MSEC 500 
+#define RUN_LED_BLINK_IVAL_MSEC 500
 
 K_HEAP_DEFINE(fs_heap, 1000);
-
-
-static const struct device *gpio0;
-
-static void
-init_gpio(void)
-{
-	int ret;
-
-	/* Configure LED */
-    gpio0 = device_get_binding("GPIO_0");
-    if (gpio0 == NULL)
-    {
-        printk("Failed to get GPIO_0\n");
-        return;
-    } else {
-        ret = gpio_pin_configure(gpio0, LED_PIN, GPIO_OUTPUT);
-        if (ret < 0)
-        {
-            printk("Failed to configure LED pin\n");
-            return;
-        }
-    }
-
-}
 
 /* SD + FS */
 
@@ -65,7 +40,7 @@ static int lsdir(const char *path, int depth, int current)
 	int res;
 	struct fs_dir_t dirp;
 	static struct fs_dirent entry;
-	
+
 	fs_dir_t_init(&dirp);
 
 	/* Verify fs_opendir() */
@@ -165,13 +140,21 @@ void test_sd(void)
 	}
 }
 
+void
+test_lcd(void)
+{
+	lcd_init();
+}
+
 void main(void)
 {
 
 	LOG_INF("START");
 	printk("Starting\n");
 
-	test_sd();
+	//test_sd();
+
+	test_lcd();
 
 	for (;;) {
 		k_sleep(K_MSEC(RUN_LED_BLINK_IVAL_MSEC));
