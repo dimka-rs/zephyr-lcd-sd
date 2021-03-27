@@ -6,6 +6,7 @@ project(lcd-sd)
 target_sources(app PRIVATE
   src/main.c
   src/lcd.c
+  src/sd.c
 )
 
 target_include_directories(app PRIVATE inc)

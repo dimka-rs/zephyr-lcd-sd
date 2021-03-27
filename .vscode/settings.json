@@ -3,6 +3,7 @@
         "gpio.h": "c",
         "device.h": "c",
         "fs.h": "c",
-        "ff.h": "c"
+        "ff.h": "c",
+        "sd.h": "c"
     }
 }

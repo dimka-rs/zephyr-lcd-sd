@@ -1,15 +1,34 @@
 #include <zephyr.h>
 #include <drivers/gpio.h>
+#include <logging/log.h>
+
+#define LOG_MODULE_NAME lcd
+LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define DATA_WIDTH 8
+
+#define CS_ACTIVE  gpio_pin_set(gpio0, lcd0.cs, 0)
+#define CS_IDLE    gpio_pin_set(gpio0, lcd0.cs, 1)
+#define RD_ACTIVE  gpio_pin_set(gpio0, lcd0.rd, 0)
+#define RD_IDLE    gpio_pin_set(gpio0, lcd0.rd, 1)
+#define WR_ACTIVE  gpio_pin_set(gpio0, lcd0.wr, 0)
+#define WR_IDLE    gpio_pin_set(gpio0, lcd0.wr, 1)
+#define RS_COMMAND gpio_pin_set(gpio0, lcd0.rs, 0)
+#define RS_DATA    gpio_pin_set(gpio0, lcd0.rs, 1)
+#define RST_ACTIVE gpio_pin_set(gpio0, lcd0.rst, 0)
+#define RST_IDLE   gpio_pin_set(gpio0, lcd0.rst, 1)
+
+#define DATA_INPUT  set_data_pins(GPIO_INPUT)
+#define DATA_OUTPUT set_data_pins(GPIO_OUTPUT)
+
 typedef struct
 {
-    int data[DATA_WIDTH];
-    int rst;
-    int cs;
-    int rs;
-    int wr;
-    int rd;
+    gpio_pin_t data[DATA_WIDTH];
+    gpio_pin_t rst;
+    gpio_pin_t cs;
+    gpio_pin_t rs;
+    gpio_pin_t wr;
+    gpio_pin_t rd;
 } lcd_t;
 
 lcd_t lcd0 = {
@@ -42,18 +61,16 @@ set_data_pins(gpio_flags_t flags)
 static void
 write_data(uint8_t data)
 {
-    set_data_pins(GPIO_OUTPUT);
-
     // set high byte
     for (int i = 0; i < DATA_WIDTH; i++)
     {
         gpio_pin_set(gpio0, lcd0.data[i], data & (1 << i));
     }
 
-    // strobe
-    gpio_pin_set(gpio0, lcd0.wr, 0);
-    k_sleep(K_MSEC(10));
-    gpio_pin_set(gpio0, lcd0.wr, 1);
+    WR_ACTIVE;
+    k_sleep(K_MSEC(1));
+    WR_IDLE;
+    k_sleep(K_MSEC(1));
 }
 
 static uint8_t
@@ -61,12 +78,8 @@ read_data(void)
 {
     uint8_t data = 0;
 
-    set_data_pins(GPIO_INPUT);
-
-    // strobe
-    gpio_pin_set(gpio0, lcd0.rd, 0);
-    k_sleep(K_MSEC(10));
-    // get high byte
+    RD_ACTIVE;
+    k_sleep(K_MSEC(1));
     for (int i = 0; i < DATA_WIDTH; i++)
     {
         if (gpio_pin_get(gpio0, lcd0.data[i]))
@@ -74,7 +87,8 @@ read_data(void)
             data |= (1 << i);
         }
     }
-    gpio_pin_set(gpio0, lcd0.rd, 1);
+    RD_IDLE;
+    k_sleep(K_MSEC(1));
 
     return data;
 }
@@ -84,17 +98,22 @@ lcd_read_id(void)
 {
     uint16_t id;
 
-    gpio_pin_set(gpio0, lcd0.cs, 0);
+    RS_COMMAND;
+    DATA_OUTPUT;
+    CS_ACTIVE;
+    write_data(0); // 0x00
+    write_data(0); // Driver Code register address
+    CS_IDLE;
 
-    gpio_pin_set(gpio0, lcd0.rs, 0); // idx reg/int status
-    write_data(0); // set id register address
-    write_data(0); // set id register address
-    //gpio_pin_set(gpio0, lcd0.rs, 1); // maybe change read type?
+    RS_DATA;
+    DATA_INPUT;
+    CS_ACTIVE;
     id = read_data();
-    id <<= 8;
-    id |= read_data();
+    id = id << 8;
+    id = id | read_data();
+    CS_IDLE;
 
-    gpio_pin_set(gpio0, lcd0.cs, 1);
+    printk("id: 0x%04x\n", id);
     return id;
 }
 
@@ -108,25 +127,26 @@ lcd_init(void)
         return -1;
     }
 
+    gpio_pin_configure(gpio0, lcd0.cs,  GPIO_OUTPUT_HIGH);
+    gpio_pin_configure(gpio0, lcd0.rs,  GPIO_OUTPUT_HIGH);
+    gpio_pin_configure(gpio0, lcd0.rd,  GPIO_OUTPUT_HIGH);
+    gpio_pin_configure(gpio0, lcd0.wr,  GPIO_OUTPUT_HIGH);
+    gpio_pin_configure(gpio0, lcd0.rst, GPIO_OUTPUT_HIGH);
     set_data_pins(GPIO_OUTPUT_HIGH);
-    gpio_pin_configure(gpio0, lcd0.cs, GPIO_OUTPUT_HIGH);
-    gpio_pin_configure(gpio0, lcd0.rd, GPIO_OUTPUT_HIGH);
-    gpio_pin_configure(gpio0, lcd0.rs, GPIO_OUTPUT_HIGH);
-    gpio_pin_configure(gpio0, lcd0.wr, GPIO_OUTPUT_HIGH);
-    gpio_pin_configure(gpio0, lcd0.rst, GPIO_OUTPUT_LOW);
 
     // reset
-    k_sleep(K_MSEC(100));
-    gpio_pin_set(gpio0, lcd0.rst, 1);
+    RST_ACTIVE;
+    k_sleep(K_MSEC(10));
+    RST_IDLE;
 
     uint16_t id = lcd_read_id();
-    //FIXME: Is it compatible with ili9341?
-    if (id == 0x5408)
+    //My shield uses ILI9325
+    if (id == 0x9325)
     {
-        printk("LCD 5408 init OK\n");
+        printk("LCD 0x%04X init OK\n", id);
         return 0;
     }
 
-    printk("LCD ID is wrong: %04X\n", id);
+    printk("LCD ID is wrong: 0x%04X\n", id);
     return -1;
 }

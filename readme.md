@@ -22,6 +22,22 @@
 |04|LCD_WR AIN2|
 |03|LCD_RD AIN1|
 
-# Links
+# LCD (Thanks MCUFRIEND_kbv Arduino library)
 
-[How to identify LCD and touch](https://misc.ws/2015/01/24/lcd-touch-screen-information/)
+```
+Testing : (A1, D7) = 40
+Testing : (A2, D6) = 26
+ID = 0x9325
+
+*** COPY-PASTE from Serial Terminal:
+const int XP=6,XM=A2,YP=A1,YM=7; //240x320 ID=0x9325
+const int TS_LEFT=155,TS_RT=913,TS_TOP=961,TS_BOT=189;
+
+PORTRAIT  CALIBRATION     240 x 320
+x = map(p.x, LEFT=155, RT=913, 0, 240)
+y = map(p.y, TOP=961, BOT=189, 0, 320)
+
+LANDSCAPE CALIBRATION     320 x 240
+x = map(p.y, LEFT=961, RT=189, 0, 320)
+y = map(p.x, TOP=913, BOT=155, 0, 240)
+```
