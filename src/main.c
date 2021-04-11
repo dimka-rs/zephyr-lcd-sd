@@ -15,7 +15,7 @@ void main(void)
 
 	LOG_INF("START");
 
-	sd_init();
+	//sd_init();
 	lcd_init();
 
 	for (;;) {
